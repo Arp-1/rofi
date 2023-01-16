@@ -227,6 +227,11 @@ static gboolean dmenu_async_read_proc(gint fd, GIOCondition condition,
       if (changed) {
         rofi_view_reload();
       }
+    } else if (command == 'x') {
+        g_free(pd->cmd_list);
+        pd->cmd_list_length = 0;
+        pd->cmd_list_real_length = 0;
+        g_free(block);
     } else if (command == 'q') {
       if (pd->loading) {
         rofi_view_set_overlay(rofi_view_get_active(), NULL);
@@ -310,6 +315,12 @@ static gpointer read_input_thread(gpointer userdata) {
                   write(pd->pipefd2[1], "r", 1);
                 }
               }
+            } else if(line[i] == '\0') { // Reset the list if there is sentinel in input stream
+              memmove(&line[0], &line[i + 1], nread - (i + 1));
+              nread -= (i + 1);
+              i = 0;
+              write(pd->pipefd2[1], "x", 1);
+              break;
             } else {
               i++;
             }
