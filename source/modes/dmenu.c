@@ -228,13 +228,9 @@ static gboolean dmenu_async_read_proc(gint fd, GIOCondition condition,
         rofi_view_reload();
       }
     } else if (command == 'x') {
-        g_free(pd->cmd_list);
+        pd->cmd_list = g_realloc(pd->cmd_list, 0);
         pd->cmd_list_length = 0;
         pd->cmd_list_real_length = 0;
-        Block *block = NULL;
-        while ((block = g_async_queue_try_pop(pd->async_queue)) != NULL) {
-          g_free(block);
-        }
     } else if (command == 'q') {
       if (pd->loading) {
         rofi_view_set_overlay(rofi_view_get_active(), NULL);
@@ -322,8 +318,15 @@ static gpointer read_input_thread(gpointer userdata) {
               memmove(&line[0], &line[i + 1], nread - (i + 1));
               nread -= (i + 1);
               i = 0;
+              // Forcibly push anything in the block to queue if there is anything in the block 
+              if (block) {
+                  g_timer_start(tim);
+                  g_async_queue_push(pd->async_queue, block);
+                  block = NULL;
+                  write(pd->pipefd2[1], "r", 1);
+              }
+              while(g_async_queue_length(pd->async_queue) > 0); // Wait for the queue to be processed
               write(pd->pipefd2[1], "x", 1);
-              break;
             } else {
               i++;
             }
