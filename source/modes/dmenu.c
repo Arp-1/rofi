@@ -231,7 +231,10 @@ static gboolean dmenu_async_read_proc(gint fd, GIOCondition condition,
         g_free(pd->cmd_list);
         pd->cmd_list_length = 0;
         pd->cmd_list_real_length = 0;
-        g_free(block);
+        Block *block = NULL;
+        while ((block = g_async_queue_try_pop(pd->async_queue)) != NULL) {
+          g_free(block);
+        }
     } else if (command == 'q') {
       if (pd->loading) {
         rofi_view_set_overlay(rofi_view_get_active(), NULL);
